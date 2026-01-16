@@ -1,9 +1,9 @@
 package chatapp.model;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import java.time.LocalDateTime;
 
 @Entity
@@ -13,9 +13,15 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String sender;
-    private String recipient;
     private String content;
+    private MessageType type;
     private LocalDateTime timestamp;
+
+    public enum MessageType {
+        CHAT,
+        JOIN,
+        LEAVE
+    }
 
     public Long getId() {
         return id;
@@ -33,20 +39,20 @@ public class Message {
         this.sender = sender;
     }
 
-    public String getRecipient() {
-        return recipient;
-    }
-
-    public void setRecipient(String recipient) {
-        this.recipient = recipient;
-    }
-
     public String getContent() {
         return content;
     }
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public MessageType getType() {
+        return type;
+    }
+
+    public void setType(MessageType type) {
+        this.type = type;
     }
 
     public LocalDateTime getTimestamp() {

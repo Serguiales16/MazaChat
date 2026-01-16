@@ -1,114 +1,336 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>MazaChat</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MazaChat - Group Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --tertiary-bg: #0f3460;
+            --primary-text: #e94560;
+            --secondary-text: #dcdcdc;
+            --accent-color: #16a085;
+            --message-bg-own: #e94560;
+            --message-bg-other: #2c3e50;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--secondary-text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 95%;
+            max-width: 800px;
+            height: 90vh;
+            background-color: var(--secondary-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: var(--tertiary-bg);
+            padding: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            color: var(--primary-text);
+            font-weight: 700;
+            border-bottom: 2px solid var(--primary-text);
+        }
+
+        .messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            line-height: 1.4;
+        }
+
+        .message.own {
+            background-color: var(--message-bg-own);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.other {
+            background-color: var(--message-bg-other);
+            color: var(--secondary-text);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message .sender {
+            font-weight: 700;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+        }
+
+        .message.own .sender {
+            color: white;
+        }
+
+        .chat-input-form {
+            display: flex;
+            padding: 15px;
+            background-color: var(--tertiary-bg);
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: var(--primary-bg);
+            color: var(--secondary-text);
+            font-size: 1em;
+        }
+
+        #send-button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background-color: var(--primary-text);
+            color: white;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        /* Auth Overlay */
+        #auth-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #auth-box {
+            background: var(--secondary-bg);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #auth-box h2 { color: var(--primary-text); }
+        .form-group { margin-bottom: 15px; }
+        .auth-input { width: 80%; padding: 10px; border-radius: 5px; border: 1px solid var(--tertiary-bg); }
+        .auth-button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        #login-button { background-color: var(--accent-color); color: white; }
+        #register-button { background-color: var(--primary-text); color: white; }
+
+    </style>
 </head>
 <body>
-<div class="container">
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Login/Register</div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <input type="text" id="username" class="form-control" placeholder="Username">
-                    </div>
-                    <div class="form-group">
-                        <input type="password" id="password" class="form-control" placeholder="Password">
-                    </div>
-                    <button id="login" class="btn btn-primary">Login</button>
-                    <button id="register" class="btn btn-secondary">Register</button>
-                </div>
+
+    <div id="auth-overlay">
+        <div id="auth-box">
+            <h2>Welcome to MazaChat</h2>
+            <p>Login or Register to join the chat</p>
+            <div class="form-group">
+                <input type="text" id="username" class="auth-input" placeholder="Username">
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Chat</div>
-                <div class="card-body">
-                    <div id="messages" style="height: 300px; overflow-y: scroll;"></div>
-                </div>
-                <div class="card-footer">
-                    <div class="input-group">
-                        <input type="text" id="recipient" class="form-control" placeholder="Recipient">
-                        <input type="text" id="message" class="form-control" placeholder="Type a message...">
-                        <div class="input-group-append">
-                            <button id="send" class="btn btn-primary">Send</button>
-                        </div>
-                    </div>
-                </div>
+            <div class="form-group">
+                <input type="password" id="password" class="auth-input" placeholder="Password">
             </div>
+            <button id="login-button" class="auth-button">Login</button>
+            <button id="register-button" class="auth-button">Register</button>
         </div>
     </div>
-</div>
 
-<script>
-    var stompClient = null;
-    var username = null;
-    var jwt = null;
+    <div class="chat-container" style="display: none;">
+        <div class="chat-header">MazaChat Global Group</div>
+        <div class="messages" id="message-area"></div>
+        <form class="chat-input-form" id="message-form">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button type="submit" id="send-button">Send</button>
+        </form>
+    </div>
 
-    function connect() {
-        var socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-        stompClient.connect({ 'Authorization': 'Bearer ' + jwt }, function (frame) {
-            console.log('Connected: ' + frame);
-            stompClient.subscribe('/user/topic/messages', function (message) {
-                showMessage(JSON.parse(message.body));
-            });
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script>
+        const authOverlay = document.getElementById('auth-overlay');
+        const chatContainer = document.querySelector('.chat-container');
+        const messageArea = document.getElementById('message-area');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+
+        const loginButton = document.getElementById('login-button');
+        const registerButton = document.getElementById('register-button');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        let stompClient = null;
+        let username = null;
+        let jwtToken = null;
+
+        // --- Authentication Logic ---
+        registerButton.addEventListener('click', async () => {
+            const user = { username: usernameInput.value, password: passwordInput.value };
+            if (!user.username || !user.password) {
+                alert('Username and password are required.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
+                if (response.ok) {
+                    alert('Registration successful! Please log in.');
+                } else {
+                    alert('Registration failed. Username might be taken.');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+            }
         });
-    }
 
-    function showMessage(message) {
-        var messageElement = document.createElement('p');
-        messageElement.appendChild(document.createTextNode(message.sender + ": " + message.content));
-        document.getElementById('messages').appendChild(messageElement);
-    }
+        loginButton.addEventListener('click', async () => {
+            const user = { username: usernameInput.value, password: passwordInput.value };
+            if (!user.username || !user.password) {
+                alert('Username and password are required.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
 
-    document.getElementById('login').addEventListener('click', function() {
-        var user = {
-            username: document.getElementById('username').value,
-            password: document.getElementById('password').value
-        };
-        fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user)
-        }).then(response => response.text()).then(token => {
-            jwt = token;
-            username = user.username;
-            connect();
+                if (response.ok) {
+                    jwtToken = await response.text();
+                    username = user.username;
+
+                    authOverlay.style.display = 'none';
+                    chatContainer.style.display = 'flex';
+
+                    connectToChat();
+                } else {
+                    alert('Login failed. Check your credentials.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+            }
         });
-    });
 
-    document.getElementById('register').addEventListener('click', function() {
-        var user = {
-            username: document.getElementById('username').value,
-            password: document.getElementById('password').value
-        };
-        fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user)
-        }).then(() => {
-            alert('Registration successful. Please login.');
-        });
-    });
-
-    document.getElementById('send').addEventListener('click', function() {
-        var messageContent = document.getElementById('message').value;
-        var recipient = document.getElementById('recipient').value;
-        if(messageContent && stompClient) {
-            var chatMessage = {
-                sender: username,
-                recipient: recipient,
-                content: messageContent
-            };
-            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
-            document.getElementById('message').value = '';
+        // --- Chat Logic ---
+        function connectToChat() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({ 'Authorization': `Bearer ${jwtToken}` }, onConnected, onError);
         }
-    });
-</script>
+
+        async function onConnected() {
+            // Subscribe to the Public Topic
+            stompClient.subscribe('/topic/group', onMessageReceived);
+
+            // Fetch chat history
+            try {
+                const historyResponse = await fetch('/api/messages/group', {
+                    headers: { 'Authorization': `Bearer ${jwtToken}` }
+                });
+                const history = await historyResponse.json();
+                history.forEach(msg => displayMessage(msg));
+            } catch (error) {
+                console.error('Error fetching history:', error);
+            }
+
+            // Tell your name to the group
+            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({ sender: username, content: 'Joined the chat!', type: 'JOIN' }));
+        }
+
+        function onError(error) {
+            console.error('Could not connect to WebSocket server. Please refresh and try again!', error);
+        }
+
+        messageForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const messageContent = messageInput.value.trim();
+
+            if (messageContent && stompClient) {
+                const chatMessage = {
+                    sender: username,
+                    content: messageInput.value,
+                    type: 'CHAT'
+                };
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+                messageInput.value = '';
+            }
+        });
+
+        function onMessageReceived(payload) {
+            try {
+                const message = JSON.parse(payload.body);
+                displayMessage(message);
+            } catch (e) {
+                console.error("Could not parse received message:", payload.body);
+            }
+        }
+
+        function displayMessage(message) {
+            if (!message || !message.sender || !message.content) {
+                console.error("Invalid message object received:", message);
+                return;
+            }
+
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+
+            if (message.type === 'JOIN' || message.type === 'LEAVE') {
+                messageElement.classList.add('event-message');
+                messageElement.textContent = `${message.sender} ${message.content}`;
+            } else {
+                if (message.sender === username) {
+                    messageElement.classList.add('own');
+                } else {
+                    messageElement.classList.add('other');
+                }
+
+                const senderElement = document.createElement('div');
+                senderElement.classList.add('sender');
+                senderElement.textContent = message.sender;
+
+                const contentElement = document.createElement('div');
+                contentElement.textContent = message.content;
+
+                messageElement.appendChild(senderElement);
+                messageElement.appendChild(contentElement);
+            }
+
+            messageArea.appendChild(messageElement);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+    </script>
 </body>
 </html>

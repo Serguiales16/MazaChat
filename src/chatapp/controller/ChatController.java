@@ -9,11 +9,13 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class ChatController {
@@ -28,13 +30,32 @@ public class ChatController {
     public void sendMessage(@Payload Message chatMessage, Principal principal) {
         chatMessage.setSender(principal.getName());
         chatMessage.setTimestamp(LocalDateTime.now());
-        messageService.saveMessage(chatMessage);
-        messagingTemplate.convertAndSendToUser(
-                chatMessage.getRecipient(), "/topic/messages", chatMessage);
+        
+        Message savedMessage = messageService.saveMessage(chatMessage);
+
+        // Construye un mapa simple para enviar como JSON
+        Map<String, String> messageMap = Map.of(
+                "sender", savedMessage.getSender(),
+                "content", savedMessage.getContent(),
+                "type", savedMessage.getType().toString(),
+                "timestamp", savedMessage.getTimestamp().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        );
+
+        messagingTemplate.convertAndSend("/topic/group", messageMap);
     }
 
-    @GetMapping("/api/messages/{recipient}")
-    public ResponseEntity<List<Message>> getChatHistory(@PathVariable String recipient, Principal principal) {
-        return ResponseEntity.ok(messageService.getChatHistory(principal.getName(), recipient));
+    @GetMapping("/api/messages/group")
+    public ResponseEntity<List<Map<String, String>>> getGroupChatHistory() {
+        List<Message> messages = messageService.getGroupChatHistory();
+        
+        // Convierte la lista de mensajes a una lista de mapas simples
+        List<Map<String, String>> messageMaps = messages.stream().map(msg -> Map.of(
+                "sender", msg.getSender(),
+                "content", msg.getContent(),
+                "type", msg.getType().toString(),
+                "timestamp", msg.getTimestamp().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        )).collect(Collectors.toList());
+
+        return ResponseEntity.ok(messageMaps);
     }
 }

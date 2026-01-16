@@ -3,6 +3,7 @@ package chatapp.service;
 import chatapp.model.Message;
 import chatapp.repository.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,7 +18,8 @@ public class MessageService {
         return messageRepository.save(message);
     }
 
-    public List<Message> getChatHistory(String sender, String recipient) {
-        return messageRepository.findBySenderAndRecipientOrRecipientAndSenderOrderByTimestampAsc(sender, recipient, sender, recipient);
+    public List<Message> getGroupChatHistory() {
+        // Busca todos los mensajes y los ordena por fecha de envío
+        return messageRepository.findAll(Sort.by(Sort.Direction.ASC, "timestamp"));
     }
 }
