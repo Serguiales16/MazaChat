@@ -1,4 +1,4 @@
-app = "mazachat"
+# app = "mazachat"  <-- Comentado para que Fly genere un nombre único o te pida uno
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
